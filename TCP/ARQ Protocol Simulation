@@ -1,0 +1,50 @@
+2. ARQ Protocol Simulation
+
+% Set parameters
+snr_db = 10;         % dB, Signal-to-noise ratio
+P_s = 1;             % Transmission power
+num_frames = 100;    % Number of data frames sent
+frame_size = 10000;  % Data frame length
+err_threshold = 1e-3;% Bit error rate threshold
+% Initialize transmission status
+err_frames = zeros(1, num_frames); % Count the number of erroneous frames
+% Transmit under random noise variance, varying random noise variance each run
+N_var = 0.01 + 0.19 * rand(1);
+fprintf('Current noise variance is %.2f mW\n', N_var);
+% Calculate parameters such as signal-to-noise ratio
+snr_linear = 10^(snr_db / 10);
+noise_var = N_var;
+snr_lin_awgn = P_s / noise_var;
+snr_db_awgn = 10 * log10(snr_lin_awgn);
+% Send num_frames data frames
+for j = 1:num_frames
+    % Generate random data and perform BPSK modulation
+    data = randi([0, 1], 1, frame_size);
+    tx_bits = 2 * data - 1; % BPSK modulation
+    % Count the number of retransmissions for the current data frame
+    resends = 0;
+    while true
+        % Add Gaussian white noise to simulate the transmission process
+        rx_bits = awgn(tx_bits, snr_db_awgn, 'measured');
+        % Perform soft decision demodulation
+        rx_data = (rx_bits > 0);
+        % Calculate bit error rate and check if retransmission is needed
+        err_rate = biterr(data, rx_data) / frame_size;
+        if err_rate > err_threshold
+            err_frames(j) = err_frames(j) + 1;
+            resends = resends + 1;
+            % Retransmit the current data frame
+            tx_bits = 2 * data - 1;
+            % Print retransmission information
+            fprintf('Frame %d transmission failed, retransmitting %d time(s), BER=%.4f\n', j, resends, err_rate);
+        else
+            break;
+        end
+    end
+    % Print successful transmission information
+    fprintf('Frame %d transmission succeeded, BER=%.4f\n', j, err_rate);
+    % If it's the last frame and the transmission is successful
+    if (j == num_frames) && (err_frames(j) == 0)
+        fprintf('Entire transmission process completed, all data transmitted successfully\n');
+    end
+end

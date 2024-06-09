@@ -1,0 +1,37 @@
+TCP/IP Communication Simulation in the Same Local Area Network.
+
+Server-Side Code:
+% This server program should run first
+x0 = randi([0 1], 1, 10000); % Generate 10,000 random bits, stored in the bits array
+data = -2*x0 + 1; % Map bit data to positive and negative signs of the carrier
+s = whos('data');
+tcpipServer = tcpip('10.133.186.215', 55000, 'NetworkRole', 'Server');
+set(tcpipServer, 'OutputBufferSize', s.bytes);
+fopen(tcpipServer); % The server will wait here for client connection and send string data once connected
+fwrite(tcpipServer, data(:), 'double');
+fclose(tcpipServer);
+
+Client-Side Code:
+tcpipClient = tcpip('10.133.186.215', 55000, 'NetworkRole', 'Client');
+% Set the input buffer size
+set(tcpipClient, 'InputBufferSize', 200000);
+% Set the maximum response delay
+set(tcpipClient, 'Timeout', 60);
+% Open the port and connect to the server
+fopen(tcpipClient);
+% Receive information sent by the host, transmitted as a binary string
+rawData = fread(tcpipClient, 20000, 'double');
+snr = 10; % Signal-to-noise ratio is 10 dB
+rx_data = awgn(rawData, snr, 'measured');
+demod_data = pskdemod(rx_data, 2);
+% Close the client connection
+fclose(tcpipClient);
+% reshapedData = reshape(rawData, 31, 31);
+
+Bit Error Rate Calculation Code:
+numErrs = biterr(x0, demod_data);
+ber = numErrs / length(x0);
+disp(['Bit Error Rate: ', num2str(ber)]);
+
+
+

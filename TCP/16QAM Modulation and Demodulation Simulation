@@ -1,0 +1,44 @@
+4.16QAM Modulation and Demodulation Simulation
+
+% Set modulation parameters
+M = 16; % Modulation order is 16, i.e., 16QAM
+k = log2(M); % Number of bits per symbol
+EbNoVec = -10:2:20; % Range of signal-to-noise ratio
+EsNoVec = EbNoVec + 10 * log10(k); % Symbol energy to noise power spectral density ratio
+% Generate random bit stream
+numBits = 10^4; % Number of bits
+dataIn = randi([0 1], numBits, 1);
+% Group data in groups of four
+dataInMatrix = reshape(dataIn, length(dataIn) / k, k);
+% Map bit combinations to 16QAM constellation
+dataSym = bi2de(dataInMatrix);
+dataMod = qammod(dataSym, M);
+% Simulate and calculate bit error rate and theoretical bit error rate
+for i = 1:length(EbNoVec)
+    % Add AWGN noise
+    dataModNoisy = awgn(dataMod, EsNoVec(i));
+    % Demodulate from 16QAM constellation
+    dataSymRx = qamdemod(dataModNoisy, M);
+    % Convert demodulated symbols back to bit stream
+    dataOutMatrix = de2bi(dataSymRx, k);
+    dataOut = dataOutMatrix(:);
+    % Calculate bit error rate
+    numErrs(i) = biterr(dataIn, dataOut);
+    numBits(i) = length(dataIn);
+end
+% Calculate theoretical bit error rate
+berTheory = berawgn(EbNoVec, 'qam', M);
+% Plot bit error rate vs signal-to-noise ratio
+berSimulated = numErrs ./ numBits;
+semilogy(EbNoVec, berSimulated, 'b*');
+hold on;
+semilogy(EbNoVec, berTheory, 'r-');
+title('Bit Error Rate vs Signal-to-Noise Ratio');
+legend('Simulated BER', 'Theoretical BER');
+xlabel('SNR Eb/No (dB)');
+ylabel('Bit Error Rate');
+grid on;
+% Plot constellation diagram
+h = scatterplot(dataModNoisy, 1, 0, 'g.');
+hold on;
+scatter
